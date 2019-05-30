@@ -1,0 +1,87 @@
+#!/bin/sh
+# Script to be placed in /etc/initramfs-tools/scripts/init-premount/ipv6
+
+PREREQ=""
+prereqs()
+{
+	echo "$PREREQ"
+}
+
+parse_options()
+{
+        local v6opts
+        v6opts="$1"
+	echo "v6opts='$v6opts'"
+
+	addr=""
+	gw=""
+	iface=""
+	accept_ra=0
+	forwarding=0
+
+        local IFS=","
+        for x in $v6opts; do
+                case $x in
+                addr=*)
+                        addr=${x#addr=}
+                        ;;
+                gw=*)
+                        gw=${x#gw=}
+                        ;;
+                iface=*)
+                        iface=${x#iface=}
+                        ;;
+                accept_ra=*)
+                        iface=${x#accept_ra=}
+                        ;;
+                ll=*)
+                        ll=${x#ll=}
+                        ;;
+                forwarding=*)
+                        forwarding=${x#forwarding=}
+                        ;;
+		esac
+        done
+	if [ ! -d /proc/sys/net/ipv6/conf/${iface} ]; then
+	    echo "IPv6: Interface ${iface} not found, sorry."
+	    return 0
+	fi
+	echo -ne "IPv6 address: ${addr}\t"
+	echo "IPv6 gateway: ${gw}"
+	echo -ne "IPv6 iface: ${iface}\t"
+        echo "IPv6 link-local address: ${ll}"
+	echo ${accept_ra} > /proc/sys/net/ipv6/conf/${iface}/accept_ra
+	echo ${forwarding} > /proc/sys/net/ipv6/conf/${iface}/forwarding
+	if [ "x${ll}" != "" ]; then
+	    /bin/ip -6 address flush dev ${iface}
+	    /bin/ip -6 address add ${ll} scope link dev ${iface}
+	fi
+	/bin/ip link set ${iface} up
+	/bin/ip -6 address add ${addr} dev ${iface}
+	if [ "x${gw}" != "" ]; then
+	    /bin/ip -6 route del default
+	    /bin/ip -6 route add default via ${gw}
+	fi
+#	/bin/ip -6 addr show dev ${iface}
+        return 0
+}
+
+case $1 in
+# get pre-requisites
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+for x in $(cat /proc/cmdline); do
+	case ${x} in
+	ipv6=*)
+		opt="${x#ipv6=}"
+		modprobe ipv6
+		# syntax: ipv6=addr=<address>/<netmask>,gw=<gateway>,iface=<interface>,forwarding=<0/1>,accept_ra=<0/1/2>
+		# colons are not used as delimiters due to them being in use in ipv6 addrs
+		parse_options ${opt}
+		;;
+	esac
+done
