@@ -53,16 +53,16 @@ parse_options()
 	echo ${accept_ra} > /proc/sys/net/ipv6/conf/${iface}/accept_ra
 	echo ${forwarding} > /proc/sys/net/ipv6/conf/${iface}/forwarding
 	if [ "x${ll}" != "" ]; then
-	    /bin/ip -6 address flush dev ${iface}
-	    /bin/ip -6 address add ${ll} scope link dev ${iface}
+	    /sbin/ip -6 address flush dev ${iface}
+	    /sbin/ip -6 address add ${ll} scope link dev ${iface}
 	fi
-	/bin/ip link set ${iface} up
-	/bin/ip -6 address add ${addr} dev ${iface}
+	/sbin/ip link set ${iface} up
+	/sbin/ip -6 address add ${addr} dev ${iface}
 	if [ "x${gw}" != "" ]; then
-	    /bin/ip -6 route del default
-	    /bin/ip -6 route add default via ${gw}
+	    /sbin/ip -6 route del default
+	    /sbin/ip -6 route add default via ${gw}
 	fi
-#	/bin/ip -6 addr show dev ${iface}
+#	/sbin/ip -6 addr show dev ${iface}
         return 0
 }
 
