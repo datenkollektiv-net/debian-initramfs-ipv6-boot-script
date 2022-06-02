@@ -9,17 +9,17 @@ prereqs()
 
 parse_options()
 {
-    local v6opts
     v6opts="$1"
     echo "v6opts='$v6opts'"
 
     addr=""
     gw=""
     iface=""
+    ll=""
     accept_ra=0
     forwarding=0
 
-    local IFS=","
+    IFS=","
     for x in $v6opts; do
         case $x in
             addr=*)
@@ -42,28 +42,27 @@ parse_options()
                 ;;
         esac
     done
-    if [ ! -d /proc/sys/net/ipv6/conf/${iface} ]; then
-        echo "IPv6: Interface ${iface} not found, sorry."
+    if [ ! -d "/proc/sys/net/ipv6/conf/${iface}" ]; then
+        log_failure_msg "IPv6: Interface ${iface} not found, sorry."
         return 0
     fi
-    echo -ne "IPv6 address: ${addr}\t"
-    echo "IPv6 gateway: ${gw}"
-    echo -ne "IPv6 iface: ${iface}\t"
-        echo "IPv6 link-local address: ${ll}"
-    echo ${accept_ra} > /proc/sys/net/ipv6/conf/${iface}/accept_ra
-    echo ${forwarding} > /proc/sys/net/ipv6/conf/${iface}/forwarding
-    if [ "x${ll}" != "" ]; then
-        /sbin/ip -6 address flush dev ${iface}
-        /sbin/ip -6 address add ${ll} scope link dev ${iface}
+
+    log_begin_msg "IPv6: Setup IPv6 on ${iface}"
+    echo "${accept_ra}" > "/proc/sys/net/ipv6/conf/${iface}/accept_ra"
+    echo "${forwarding}" > "/proc/sys/net/ipv6/conf/${iface}/forwarding"
+    if [ -n "${ll}" ]; then
+        /sbin/ip -6 address flush dev "${iface}"
+        /sbin/ip -6 address add "${ll}" scope link dev "${iface}"
     fi
-    /sbin/ip link set ${iface} up
-    /sbin/ip -6 address add ${addr} dev ${iface}
-    if [ "x${gw}" != "" ]; then
+    /sbin/ip link set "${iface}" up
+    /sbin/ip -6 address add "${addr}" dev "${iface}"
+    if [ -n "${gw}" ]; then
         /sbin/ip -6 route del default
-        /sbin/ip -6 route add default via ${gw}
+        /sbin/ip -6 route add default via "${gw}" dev "${iface}"
     fi
-#    /sbin/ip -6 addr show dev ${iface}
-        return 0
+    log_end_msg
+
+    return 0
 }
 
 case $1 in
@@ -74,14 +73,12 @@ prereqs)
     ;;
 esac
 
-for x in $(cat /proc/cmdline); do
-    case ${x} in
+for arg in $(cat /proc/cmdline); do
+    case ${arg} in
         ipv6=*)
-            opt="${x#ipv6=}"
-            modprobe ipv6
             # syntax: ipv6=addr=<address>/<netmask>,gw=<gateway>,iface=<interface>,forwarding=<0/1>,accept_ra=<0/1/2>
             # colons are not used as delimiters due to them being in use in ipv6 addrs
-            parse_options ${opt}
+            parse_options "${arg#ipv6=}"
             ;;
     esac
 done
