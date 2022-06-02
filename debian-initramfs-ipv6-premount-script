@@ -20,25 +20,25 @@ parse_options()
     forwarding=0
 
     IFS=","
-    for x in $v6opts; do
-        case $x in
+    for opt in $v6opts; do
+        case $opt in
             addr=*)
-                addr=${x#addr=}
+                addr=${opt#addr=}
                 ;;
             gw=*)
-                gw=${x#gw=}
+                gw=${opt#gw=}
                 ;;
             iface=*)
-                iface=${x#iface=}
+                iface=${opt#iface=}
                 ;;
             accept_ra=*)
-                iface=${x#accept_ra=}
+                iface=${opt#accept_ra=}
                 ;;
             ll=*)
-                ll=${x#ll=}
+                ll=${opt#ll=}
                 ;;
             forwarding=*)
-                forwarding=${x#forwarding=}
+                forwarding=${opt#forwarding=}
                 ;;
         esac
     done
